@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modern Calculator</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  font-family: Inter, system-ui, sans-serif;
+  background: linear-gradient(135deg, #e2e8f0, #f8fafc);
+}
+.calculator {
+  width: min(360px, 100%);
+  padding: 20px;
+  border-radius: 28px;
+  background: #111827;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, .25);
+}
+.display {
+  height: 100px;
+  margin-bottom: 18px;
+  padding: 20px;
+  border-radius: 20px;
+  background: #020617;
+  color: #fff;
+  display: flex;
+  align-items: end;
+  justify-content: end;
+  font-size: clamp(2rem, 9vw, 3.2rem);
+  font-weight: 600;
+  overflow: hidden;
+  word-break: break-all;
+}
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+button {
+  height: 68px;
+  border: 0;
+  border-radius: 18px;
+  background: #263449;
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .08s, filter .15s;
+}
+button:hover { filter: brightness(1.15); }
+button:active { transform: scale(.95); }
+.operator { background: #475569; }
+.clear { background: #dc2626; }
+.equals {
+  background: #2563eb;
+  grid-row: span 2;
+  height: 148px;
+}
+.zero { grid-column: span 2; }
+</style>
+</head>
+<body>
+<div class="calculator">
+  <div class="display" id="display">0</div>
+  <div class="keys">
+    <button class="clear" data-action="clear">C</button>
+    <button class="operator" data-action="operator" data-value="/">÷</button>
+    <button class="operator" data-action="operator" data-value="*">×</button>
+    <button class="operator" data-action="operator" data-value="-">−</button>
+
+    <button data-action="digit" data-value="7">7</button>
+    <button data-action="digit" data-value="8">8</button>
+    <button data-action="digit" data-value="9">9</button>
+    <button class="operator" data-action="operator" data-value="+">+</button>
+
+    <button data-action="digit" data-value="4">4</button>
+    <button data-action="digit" data-value="5">5</button>
+    <button data-action="digit" data-value="6">6</button>
+    <button class="equals" data-action="equals">=</button>
+
+    <button data-action="digit" data-value="1">1</button>
+    <button data-action="digit" data-value="2">2</button>
+    <button data-action="digit" data-value="3">3</button>
+
+    <button class="zero" data-action="digit" data-value="0">0</button>
+    <button data-action="decimal">.</button>
+  </div>
+</div>
+
+<script>
+const display = document.getElementById("display");
+let current = "0", previous = null, operator = null, waiting = false;
+
+function show() { display.textContent = current; }
+
+function digit(value) {
+  if (waiting) { current = value; waiting = false; }
+  else current = current === "0" ? value : current + value;
+  show();
+}
+
+function decimal() {
+  if (waiting) { current = "0."; waiting = false; }
+  else if (!current.includes(".")) current += ".";
+  show();
+}
+
+function calculate(a, b, op) {
+  a = Number(a); b = Number(b);
+  if (op === "+") return a + b;
+  if (op === "-") return a - b;
+  if (op === "*") return a * b;
+  if (op === "/") return b === 0 ? null : a / b;
+}
+
+function format(value) {
+  return Number.isFinite(value)
+    ? String(Number.parseFloat(value.toPrecision(12)))
+    : "Error";
+}
+
+function chooseOperator(next) {
+  if (operator && waiting) { operator = next; return; }
+
+  if (previous === null) {
+    previous = Number(current);
+  } else if (operator) {
+    const value = calculate(previous, Number(current), operator);
+    if (value === null) {
+      current = "Error";
+      previous = null;
+      operator = null;
+      waiting = true;
+      show();
+      return;
+    }
+    current = format(value);
+    previous = Number(current);
+    show();
+  }
+  operator = next;
+  waiting = true;
+}
+
+function equals() {
+  if (operator === null || previous === null) return;
+  const value = calculate(previous, Number(current), operator);
+  current = value === null ? "Error" : format(value);
+  previous = null;
+  operator = null;
+  waiting = true;
+  show();
+}
+
+function clear() {
+  current = "0";
+  previous = null;
+  operator = null;
+  waiting = false;
+  show();
+}
+
+document.querySelector(".keys").addEventListener("click", event => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const action = button.dataset.action;
+  const value = button.dataset.value;
+
+  if (action === "digit") digit(value);
+  else if (action === "decimal") decimal();
+  else if (action === "operator") chooseOperator(value);
+  else if (action === "equals") equals();
+  else if (action === "clear") clear();
+});
+
+document.addEventListener("keydown", event => {
+  if (/^\d$/.test(event.key)) digit(event.key);
+  else if (event.key === ".") decimal();
+  else if ("+-*/".includes(event.key)) chooseOperator(event.key);
+  else if (event.key === "Enter" || event.key === "=") equals();
+  else if (event.key === "Escape" || event.key.toLowerCase() === "c") clear();
+});
+</script>
+</body>
+</html>
